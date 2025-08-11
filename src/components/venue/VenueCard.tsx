@@ -5,7 +5,8 @@ interface VenueCardProps {
     id: string
     name: string
     location: string
-    photos: string[]
+    image?: string
+    photos?: string[]
     sportTypes: string[]
     startingPrice: number
     rating: number
@@ -17,9 +18,9 @@ export default function VenueCard({ venue }: VenueCardProps) {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="h-48 bg-gray-200 relative">
-        {venue.photos[0] ? (
+        {venue.image || venue.photos?.[0] ? (
           <img 
-            src={venue.photos[0]} 
+            src={venue.image || venue.photos?.[0]} 
             alt={venue.name}
             className="w-full h-full object-cover"
           />

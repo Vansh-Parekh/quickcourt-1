@@ -80,6 +80,23 @@ export default function AdminDashboard() {
     (filterRole === '' || user.role === filterRole)
   )
 
+  const updateReportStatus = async (reportId: string, status: 'RESOLVED' | 'DISMISSED') => {
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`/api/admin/reports/${reportId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status })
+      })
+      if (res.ok) fetchData()
+    } catch (error) {
+      console.error('Error updating report:', error)
+    }
+  }
+
   const handleLogout = () => {
     localStorage.clear()
     router.push('/')
@@ -313,8 +330,18 @@ export default function AdminDashboard() {
                           </span>
                           {report.status === 'PENDING' && (
                             <div className="space-x-2">
-                              <button className="bg-green-500 text-white px-3 py-1 rounded text-sm">Resolve</button>
-                              <button className="bg-red-500 text-white px-3 py-1 rounded text-sm">Dismiss</button>
+                              <button 
+                                onClick={() => updateReportStatus(report.id, 'RESOLVED')}
+                                className="bg-green-500 text-white px-3 py-1 rounded text-sm"
+                              >
+                                Resolve
+                              </button>
+                              <button 
+                                onClick={() => updateReportStatus(report.id, 'DISMISSED')}
+                                className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                              >
+                                Dismiss
+                              </button>
                             </div>
                           )}
                         </div>

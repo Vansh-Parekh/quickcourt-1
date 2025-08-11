@@ -43,27 +43,46 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Add sample reports if none exist
-    const sampleReports = reports.length === 0 ? [
-      {
-        id: 'sample-1',
-        reason: 'Inappropriate Behavior',
-        description: 'User was being rude to facility staff',
-        status: 'PENDING',
-        createdAt: new Date(),
-        reporter: { fullName: 'John Doe' }
-      },
-      {
-        id: 'sample-2', 
-        reason: 'Facility Issues',
-        description: 'Courts are not properly maintained',
-        status: 'RESOLVED',
-        createdAt: new Date(),
-        reporter: { fullName: 'Jane Smith' }
-      }
-    ] : reports
+    // Create sample reports if none exist
+    if (reports.length === 0) {
+      const sampleReports = await Promise.all([
+        prisma.report.create({
+          data: {
+            reporterId: decoded.userId,
+            reason: 'Inappropriate Behavior',
+            description: 'User was being rude to facility staff',
+            status: 'PENDING'
+          },
+          include: {
+            reporter: {
+              select: {
+                fullName: true,
+                email: true
+              }
+            }
+          }
+        }),
+        prisma.report.create({
+          data: {
+            reporterId: decoded.userId,
+            reason: 'Facility Issues', 
+            description: 'Courts are not properly maintained',
+            status: 'RESOLVED'
+          },
+          include: {
+            reporter: {
+              select: {
+                fullName: true,
+                email: true
+              }
+            }
+          }
+        })
+      ])
+      return NextResponse.json({ reports: sampleReports })
+    }
 
-    return NextResponse.json({ reports: sampleReports })
+    return NextResponse.json({ reports })
   } catch (error) {
     console.error('Error fetching reports:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -38,16 +38,25 @@ export default function BookCourt({ params }: { params: { courtId: string } }) {
       return
     }
 
+    const today = new Date().toISOString().split('T')[0]
+    if (selectedDate < today) {
+      alert('Cannot book for past dates')
+      return
+    }
+
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
-      const res = await fetch('/api/bookings', {
+      
+      // Create payment intent
+      const paymentRes = await fetch('/api/create-payment-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
+          amount: totalPrice,
           courtId: params.courtId,
           facilityId: venueId,
           bookingDate: selectedDate,
@@ -56,15 +65,15 @@ export default function BookCourt({ params }: { params: { courtId: string } }) {
         })
       })
 
-      if (res.ok) {
-        alert('Booking successful!')
-        router.push('/booking')
+      if (paymentRes.ok) {
+        const { clientSecret } = await paymentRes.json()
+        // Redirect to payment page with client secret
+        router.push(`/payment?client_secret=${clientSecret}&court=${params.courtId}&venue=${venueId}&date=${selectedDate}&time=${selectedTime}&duration=${duration}&amount=${totalPrice}`)
       } else {
-        const data = await res.json()
-        alert(data.error || 'Booking failed')
+        alert('Payment setup failed')
       }
     } catch (error) {
-      alert('Booking failed')
+      alert('Payment setup failed')
     } finally {
       setLoading(false)
     }

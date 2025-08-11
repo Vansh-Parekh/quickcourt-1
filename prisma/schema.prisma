@@ -34,6 +34,7 @@ model Facility {
   description String?
   address     String
   location    String
+  image       String?
   ownerId     String
   status      FacilityStatus @default(PENDING)
   photos      String[]

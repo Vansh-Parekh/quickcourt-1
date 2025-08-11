@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any
-    const { name, description, address, location } = await request.json()
+    const { name, description, address, location, image } = await request.json()
 
     const facility = await prisma.facility.create({
       data: {
@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         description,
         address,
         location,
+        image,
         ownerId: decoded.userId,
         photos: [],
         amenities: []

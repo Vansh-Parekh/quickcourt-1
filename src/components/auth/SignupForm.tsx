@@ -8,18 +8,27 @@ export default function SignupForm() {
     email: '',
     password: '',
     fullName: '',
-    role: 'USER'
+    role: 'USER',
+    avatar: '😀'
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const emojis = ['😀', '😎', '🤓', '😊', '🙂', '😄', '🤗', '🥳', '😇', '🤠', '👨💼', '👩💼', '🧑🎓', '👨🎓', '👩🎓', '🏃♂️', '🏃♀️', '⚽', '🏀', '🎾', '🏸', '🏓']
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
     setSuccess('')
+    
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      return
+    }
+    
+    setLoading(true)
 
     try {
       const res = await fetch('/api/auth/signup', {
@@ -75,6 +84,43 @@ export default function SignupForm() {
             <option value="USER">User</option>
             <option value="FACILITY_OWNER">Facility Owner</option>
           </select>
+        </div>
+
+        <div>
+          <label className="block text-gray-700 text-sm font-medium mb-2">
+            Profile Avatar
+          </label>
+          <div className="flex items-center space-x-4 mb-4">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl">
+              {formData.avatar}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-xl"
+            >
+              Choose Avatar
+            </button>
+          </div>
+          {showEmojiPicker && (
+            <div className="mb-4 p-4 border rounded-xl bg-gray-50">
+              <div className="grid grid-cols-8 gap-2">
+                {emojis.map((emoji, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
+                      setFormData({...formData, avatar: emoji})
+                      setShowEmojiPicker(false)
+                    }}
+                    className="text-2xl hover:bg-gray-200 p-2 rounded"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div>

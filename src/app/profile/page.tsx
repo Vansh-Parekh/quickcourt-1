@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 export default function Profile() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [formData, setFormData] = useState({ fullName: '', avatar: '' })
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const emojis = ['😀', '😎', '🤓', '😊', '🙂', '😄', '🤗', '🥳', '😇', '🤠', '👨💼', '👩💼', '🧑🎓', '👨🎓', '👩🎓', '🏃♂️', '🏃♀️', '⚽', '🏀', '🎾', '🏸', '🏓']
   const router = useRouter()
 
   useEffect(() => {
@@ -31,21 +35,24 @@ export default function Profile() {
       if (res.ok) {
         const data = await res.json()
         setUser(data.user)
-        // Update localStorage with fresh data
+        setFormData({ fullName: data.user.fullName, avatar: data.user.avatar || '😀' })
         localStorage.setItem('user', JSON.stringify(data.user))
       } else {
         console.error('API failed, using localStorage')
         const userData = localStorage.getItem('user')
         if (userData) {
-          setUser(JSON.parse(userData))
+          const parsedUser = JSON.parse(userData)
+          setUser(parsedUser)
+          setFormData({ fullName: parsedUser.fullName, avatar: parsedUser.avatar || '😀' })
         }
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
-      // Fallback to localStorage
       const userData = localStorage.getItem('user')
       if (userData) {
-        setUser(JSON.parse(userData))
+        const parsedUser = JSON.parse(userData)
+        setUser(parsedUser)
+        setFormData({ fullName: parsedUser.fullName, avatar: parsedUser.avatar || '😀' })
       }
     } finally {
       setLoading(false)
@@ -58,10 +65,38 @@ export default function Profile() {
     router.push('/')
   }
 
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setUpdating(true)
+    
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        setUser(data.user)
+        localStorage.setItem('user', JSON.stringify(data.user))
+        alert('Profile updated successfully!')
+      } else {
+        alert('Failed to update profile')
+      }
+    } catch (error) {
+      alert('Failed to update profile')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
   if (loading) return <div>Loading...</div>
   if (!user) return <div>No user data</div>
-
-
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -85,27 +120,16 @@ export default function Profile() {
 
       <div className="max-w-6xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
-            {/* Profile Section */}
             <div className="text-center mb-6">
-              <div className="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                </svg>
+              <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center text-4xl">
+                {user.avatar || '😀'}
               </div>
               <h2 className="text-lg font-bold text-gray-800 mb-1">{user.fullName}</h2>
               <p className="text-gray-600 text-sm mb-1">{user.role}</p>
               <p className="text-gray-600 text-sm">{user.email}</p>
             </div>
             
-            <button
-              onClick={() => setActiveSection('edit')}
-              className="w-full bg-purple-600 text-white py-2 rounded-xl font-medium hover:bg-purple-700 transition duration-200 mb-6"
-            >
-              Edit Profile
-            </button>
-
             <div className="space-y-2">
               <a 
                 href="/venues" 
@@ -124,7 +148,43 @@ export default function Profile() {
 
           <div className="lg:col-span-3 bg-white rounded-2xl shadow-lg p-6">
             <h3 className="text-2xl font-bold text-gray-800 mb-6">Profile Information</h3>
-            <form className="space-y-6">
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Profile Picture
+                </label>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-3xl">
+                    {formData.avatar || '😀'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md"
+                  >
+                    Change Avatar
+                  </button>
+                </div>
+                {showEmojiPicker && (
+                  <div className="mt-2 p-4 border rounded-md bg-gray-50">
+                    <div className="grid grid-cols-8 gap-2">
+                      {emojis.map((emoji, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            setFormData({...formData, avatar: emoji})
+                            setShowEmojiPicker(false)
+                          }}
+                          className="text-2xl hover:bg-gray-200 p-2 rounded"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -132,7 +192,8 @@ export default function Profile() {
                   </label>
                   <input
                     type="text"
-                    defaultValue={user.fullName}
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
@@ -161,9 +222,10 @@ export default function Profile() {
               </div>
               <button
                 type="submit"
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md"
+                disabled={updating}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-md disabled:opacity-50"
               >
-                Update Profile
+                {updating ? 'Updating...' : 'Update Profile'}
               </button>
             </form>
           </div>

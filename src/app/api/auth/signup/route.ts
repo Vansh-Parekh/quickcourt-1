@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { generateOTP } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Signup attempt started')
-    const { email, password, fullName, role } = await request.json()
+    const { email, password, fullName, role, avatar } = await request.json()
 
+    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email }
     })
@@ -19,24 +18,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
-    const otpCode = generateOTP()
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
+    // Create user
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         fullName,
         role: role || 'USER',
-        isVerified: true // Auto-verify for development
+        avatar: avatar || '😀',
+        isVerified: true
       }
     })
 
-    return NextResponse.json({
-      message: 'User created successfully. You can now login.',
-      userId: user.id
-    })
+    return NextResponse.json(
+      { message: 'Account created successfully! You can now login.', userId: user.id },
+      { status: 201 }
+    )
   } catch (error) {
     console.error('Signup error:', error)
     return NextResponse.json(

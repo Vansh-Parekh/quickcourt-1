@@ -72,6 +72,7 @@ export async function GET(request: NextRequest) {
         id: facility.id,
         name: facility.name,
         location: facility.location,
+        image: facility.image,
         photos: facility.photos,
         sportTypes,
         startingPrice: minPrice,

@@ -11,11 +11,16 @@ export default function OwnerDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCourtForm, setShowCourtForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [showEditCourtForm, setShowEditCourtForm] = useState(false)
   const [selectedFacility, setSelectedFacility] = useState('')
+  const [editingFacility, setEditingFacility] = useState(null)
+  const [editingCourt, setEditingCourt] = useState(null)
   const [newFacility, setNewFacility] = useState({ 
     name: '', description: '', address: '', location: '', 
-    sportTypes: [], amenities: [] 
+    sportTypes: [], amenities: [], image: '' 
   })
+  const [showImagePicker, setShowImagePicker] = useState(false)
   const [newCourt, setNewCourt] = useState({
     name: '', sportType: 'BADMINTON', pricePerHour: '', 
     operatingHours: { open: '06:00', close: '22:00' }
@@ -67,11 +72,34 @@ export default function OwnerDashboard() {
       
       if (res.ok) {
         setShowAddForm(false)
-        setNewFacility({ name: '', description: '', address: '', location: '', sportTypes: [], amenities: [] })
+        setNewFacility({ name: '', description: '', address: '', location: '', sportTypes: [], amenities: [], image: '' })
         fetchData()
       }
     } catch (error) {
       console.error('Error adding facility:', error)
+    }
+  }
+
+  const updateFacility = async () => {
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`/api/owner/facilities/${editingFacility.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newFacility)
+      })
+      
+      if (res.ok) {
+        setShowEditForm(false)
+        setEditingFacility(null)
+        setNewFacility({ name: '', description: '', address: '', location: '', sportTypes: [], amenities: [], image: '' })
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Error updating facility:', error)
     }
   }
 
@@ -94,6 +122,47 @@ export default function OwnerDashboard() {
       }
     } catch (error) {
       console.error('Error adding court:', error)
+    }
+  }
+
+  const updateCourt = async () => {
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`/api/owner/courts/${editingCourt.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newCourt)
+      })
+      
+      if (res.ok) {
+        setShowEditCourtForm(false)
+        setEditingCourt(null)
+        setNewCourt({ name: '', sportType: 'BADMINTON', pricePerHour: '', operatingHours: { open: '06:00', close: '22:00' } })
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Error updating court:', error)
+    }
+  }
+
+  const deleteCourt = async (courtId: string) => {
+    if (!confirm('Are you sure you want to delete this court?')) return
+    
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`/api/owner/courts/${courtId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      
+      if (res.ok) {
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Error deleting court:', error)
     }
   }
 
@@ -208,6 +277,80 @@ export default function OwnerDashboard() {
               {showAddForm && (
                 <div className="mb-6 p-4 border rounded-lg bg-gray-50">
                   <h4 className="font-semibold mb-4">Add New Facility</h4>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">Venue Image</label>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden">
+                        {newFacility.image ? (
+                          <img src={newFacility.image} alt="Facility" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">No Image</div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowImagePicker(!showImagePicker)}
+                        className="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm"
+                      >
+                        Choose Image
+                      </button>
+                    </div>
+                    {showImagePicker && (
+                      <div className="mt-2 p-4 border rounded bg-gray-50">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Upload from Device</label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  const reader = new FileReader()
+                                  reader.onload = (event) => {
+                                    setNewFacility({...newFacility, image: event.target?.result as string})
+                                    setShowImagePicker(false)
+                                  }
+                                  reader.readAsDataURL(file)
+                                }
+                              }}
+                              className="w-full px-3 py-2 border rounded text-sm"
+                            />
+                          </div>
+                          <div className="text-center text-gray-500 text-sm">OR</div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Image URL</label>
+                            <div className="flex space-x-2">
+                              <input
+                                type="url"
+                                placeholder="https://example.com/image.jpg"
+                                className="flex-1 px-3 py-2 border rounded text-sm"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    setNewFacility({...newFacility, image: e.target.value})
+                                    setShowImagePicker(false)
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  const input = e.target.previousElementSibling as HTMLInputElement
+                                  if (input.value) {
+                                    setNewFacility({...newFacility, image: input.value})
+                                    setShowImagePicker(false)
+                                  }
+                                }}
+                                className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input
                       type="text"
@@ -248,25 +391,166 @@ export default function OwnerDashboard() {
                 </div>
               )}
 
+              {showEditForm && (
+                <div className="mb-6 p-4 border rounded-lg bg-blue-50">
+                  <h4 className="font-semibold mb-4">Edit Facility</h4>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">Venue Image</label>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden">
+                        {newFacility.image ? (
+                          <img src={newFacility.image} alt="Facility" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">No Image</div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowImagePicker(!showImagePicker)}
+                        className="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded text-sm"
+                      >
+                        Change Image
+                      </button>
+                    </div>
+                    {showImagePicker && (
+                      <div className="mt-2 p-4 border rounded bg-gray-50">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Upload from Device</label>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) {
+                                  const reader = new FileReader()
+                                  reader.onload = (event) => {
+                                    setNewFacility({...newFacility, image: event.target?.result as string})
+                                    setShowImagePicker(false)
+                                  }
+                                  reader.readAsDataURL(file)
+                                }
+                              }}
+                              className="w-full px-3 py-2 border rounded text-sm"
+                            />
+                          </div>
+                          <div className="text-center text-gray-500 text-sm">OR</div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Image URL</label>
+                            <div className="flex space-x-2">
+                              <input
+                                type="url"
+                                placeholder="https://example.com/image.jpg"
+                                className="flex-1 px-3 py-2 border rounded text-sm"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    setNewFacility({...newFacility, image: e.target.value})
+                                    setShowImagePicker(false)
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  const input = e.target.previousElementSibling as HTMLInputElement
+                                  if (input.value) {
+                                    setNewFacility({...newFacility, image: input.value})
+                                    setShowImagePicker(false)
+                                  }
+                                }}
+                                className="bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600"
+                              >
+                                Add
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Facility Name"
+                      value={newFacility.name}
+                      onChange={(e) => setNewFacility({...newFacility, name: e.target.value})}
+                      className="px-3 py-2 border rounded"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Location"
+                      value={newFacility.location}
+                      onChange={(e) => setNewFacility({...newFacility, location: e.target.value})}
+                      className="px-3 py-2 border rounded"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Address"
+                      value={newFacility.address}
+                      onChange={(e) => setNewFacility({...newFacility, address: e.target.value})}
+                      className="px-3 py-2 border rounded md:col-span-2"
+                    />
+                    <textarea
+                      placeholder="Description"
+                      value={newFacility.description}
+                      onChange={(e) => setNewFacility({...newFacility, description: e.target.value})}
+                      className="px-3 py-2 border rounded md:col-span-2"
+                    />
+                  </div>
+                  <div className="flex space-x-2 mt-4">
+                    <button onClick={updateFacility} className="bg-blue-500 text-white px-4 py-2 rounded">
+                      Update
+                    </button>
+                    <button onClick={() => {
+                      setShowEditForm(false)
+                      setEditingFacility(null)
+                      setNewFacility({ name: '', description: '', address: '', location: '', sportTypes: [], amenities: [], image: '' })
+                    }} className="bg-gray-500 text-white px-4 py-2 rounded">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 {facilities.map((facility: any) => (
                   <div key={facility.id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-semibold">{facility.name}</h4>
-                        <p className="text-gray-600">{facility.location}</p>
-                        <p className="text-sm text-gray-500">{facility.description}</p>
-                        <span className={`inline-block mt-2 px-2 py-1 rounded text-sm ${
-                          facility.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                          facility.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {facility.status}
-                        </span>
+                      <div className="flex space-x-4">
+                        {facility.image && (
+                          <img src={facility.image} alt={facility.name} className="w-16 h-16 object-cover rounded" />
+                        )}
+                        <div>
+                          <h4 className="font-semibold">{facility.name}</h4>
+                          <p className="text-gray-600">{facility.location}</p>
+                          <p className="text-sm text-gray-500">{facility.description}</p>
+                          <span className={`inline-block mt-2 px-2 py-1 rounded text-sm ${
+                            facility.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                            facility.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {facility.status}
+                          </span>
+                        </div>
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-gray-500">{facility.courts?.length || 0} Courts</p>
-                        <button className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm">
+                        <button 
+                          onClick={() => {
+                            setEditingFacility(facility)
+                            setNewFacility({
+                              name: facility.name,
+                              description: facility.description,
+                              address: facility.address,
+                              location: facility.location,
+                              sportTypes: facility.sportTypes || [],
+                              amenities: facility.amenities || [],
+                              image: facility.image || ''
+                            })
+                            setShowEditForm(true)
+                          }}
+                          className="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                        >
                           Edit
                         </button>
                       </div>
@@ -341,6 +625,50 @@ export default function OwnerDashboard() {
                 </div>
               )}
 
+              {showEditCourtForm && (
+                <div className="mb-6 p-4 border rounded-lg bg-blue-50">
+                  <h4 className="font-semibold mb-4">Edit Court</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Court Name"
+                      value={newCourt.name}
+                      onChange={(e) => setNewCourt({...newCourt, name: e.target.value})}
+                      className="px-3 py-2 border rounded"
+                    />
+                    <select
+                      value={newCourt.sportType}
+                      onChange={(e) => setNewCourt({...newCourt, sportType: e.target.value})}
+                      className="px-3 py-2 border rounded"
+                    >
+                      <option value="BADMINTON">Badminton</option>
+                      <option value="TENNIS">Tennis</option>
+                      <option value="FOOTBALL">Football</option>
+                      <option value="BASKETBALL">Basketball</option>
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="Price per Hour"
+                      value={newCourt.pricePerHour}
+                      onChange={(e) => setNewCourt({...newCourt, pricePerHour: e.target.value})}
+                      className="px-3 py-2 border rounded"
+                    />
+                  </div>
+                  <div className="flex space-x-2 mt-4">
+                    <button onClick={updateCourt} className="bg-blue-500 text-white px-4 py-2 rounded">
+                      Update Court
+                    </button>
+                    <button onClick={() => {
+                      setShowEditCourtForm(false)
+                      setEditingCourt(null)
+                      setNewCourt({ name: '', sportType: 'BADMINTON', pricePerHour: '', operatingHours: { open: '06:00', close: '22:00' } })
+                    }} className="bg-gray-500 text-white px-4 py-2 rounded">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 {facilities.map((facility: any) => 
                   facility.courts?.map((court: any) => (
@@ -352,8 +680,28 @@ export default function OwnerDashboard() {
                           <p className="text-green-600 font-bold">₹{court.pricePerHour}/hour</p>
                         </div>
                         <div className="space-x-2">
-                          <button className="bg-blue-500 text-white px-3 py-1 rounded text-sm">Edit</button>
-                          <button className="bg-red-500 text-white px-3 py-1 rounded text-sm">Delete</button>
+                          <button 
+                            onClick={() => {
+                              setEditingCourt(court)
+                              setNewCourt({
+                                name: court.name,
+                                sportType: court.sportType,
+                                pricePerHour: court.pricePerHour.toString(),
+                                operatingHours: court.operatingHours || { open: '06:00', close: '22:00' }
+                              })
+                              setSelectedFacility(facility.id)
+                              setShowEditCourtForm(true)
+                            }}
+                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => deleteCourt(court.id)}
+                            className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </div>
                     </div>
